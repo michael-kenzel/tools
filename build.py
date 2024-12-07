@@ -82,6 +82,7 @@ class LLVM:
 			CMAKE_CXX_COMPILER="clang-cl",
 			CMAKE_INSTALL_PREFIX=self.install_dir,
 			LLVM_OPTIMIZED_TABLEGEN=True,
+			LLVM_ENABLE_LLD=True,
 			LLVM_TARGETS_TO_BUILD="X86;AArch64;NVPTX",
 			LLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld",
 			LLVM_ENABLE_BINDINGS=False,
