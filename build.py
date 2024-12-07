@@ -24,11 +24,9 @@ def pull_git_dependency(dir, url, *, branch = "main"):
 
 def cmake_var_def_args(vars):
 	for name, value in vars.items():
-		if isinstance(value, Path):
-			# necessary so that cmake deals with \ correctly
-			yield f"-D{name}:PATH={value}"
-		else:
-			yield f"-D{name}={value}"
+		match value:
+			case Path(): yield f"-D{name}:PATH={value}" # necessary so that cmake deals with \ correctly
+			case _: yield f"-D{name}={value}"
 
 def cmake_configure(build_dir, source_dir, configs, **vars):
 	if cmd("cmake", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release", *tuple(cmake_var_def_args(vars)), source_dir, cwd=build_dir) != 0:
