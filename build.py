@@ -64,6 +64,9 @@ class Ninja:
 	def build(self, configs):
 		cmd("python", self.source_dir/"configure.py", "--bootstrap", cwd=self.build_dir)
 
+	def artifacts(self):
+		yield self.build_dir/"ninja.exe"
+
 
 @tool
 class LLVM:
@@ -100,6 +103,11 @@ class LLVM:
 	def build(self, configs):
 		ninja(self.build_dir, "install")
 
+	def artifacts(self):
+		with open(self.build_dir/"install_manifest.txt") as file:
+			for l in file:
+				yield Path(l.strip())
+
 
 def dependencies(this_dir, include):
 	if Ninja in include:
@@ -109,26 +117,44 @@ def dependencies(this_dir, include):
 		yield LLVM(this_dir/"llvm")
 
 
-def build(deps, configs):
-	for dep in deps:
-		dep.configure(configs)
-		dep.build(configs)
-
-
 def pull(deps):
 	for dep in deps:
 		dep.pull()
 
 
+def build(deps, *, configs):
+	for dep in deps:
+		dep.configure(configs)
+		dep.build(configs)
+
+
+def package(this_dir, deps):
+	import tempfile
+
+	for dep in deps:
+		dest = (this_dir/type(dep).__name__).with_suffix(".7z")
+
+		if dest.exists():
+			dest.unlink()
+
+		with tempfile.NamedTemporaryFile(delete_on_close=False) as listfile:
+			for a in dep.artifacts():
+				listfile.write(str(a.relative_to(this_dir)).encode())
+				listfile.write(b'\n')
+			listfile.close()
+
+			cmd("7z", "a", "-t7z", "-spf", f"-ir@{listfile.name}", dest, cwd=this_dir)
+
+
 def main(args):
 	this_dir = Path(__file__).parent
 
-	def cmdargs():
-		yield dependencies(this_dir, args.tools)
-		if hasattr(args, "configs"):
-			yield args.configs
+	deps = [d for d in dependencies(this_dir, args.tools)]
 
-	args.command(*tuple(cmdargs()))
+	match args.command:
+		case "pull": pull(deps)
+		case "build": build(deps, configs=args.configs)
+		case "package": package(this_dir, deps)
 
 
 def parse_args():
@@ -143,16 +169,18 @@ def parse_args():
 	args = argparse.ArgumentParser()
 	sub_args = args.add_subparsers(required=True)
 
-	def add_command(name, function):
+	def add_command(name):
 		args = sub_args.add_parser(name)
-		args.set_defaults(command=function)
+		args.set_defaults(command=name)
 		args.add_argument("tools", nargs="*", type=lookup_tool, default=list(tools.values()))
 		return args
 
-	build_cmd = add_command("build", build)
+	pull_cmd = add_command("pull")
+
+	build_cmd = add_command("build")
 	build_cmd.add_argument("-cfg", "--config", action="append", dest="configs", default=["Release"])
 
-	pull_cmd = add_command("pull", pull)
+	build_cmd = add_command("package")
 
 	return args.parse_args()
 
