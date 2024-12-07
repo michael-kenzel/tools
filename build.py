@@ -35,8 +35,12 @@ def cmake_configure(build_dir, source_dir, configs, **vars):
 		raise Exception(f"cmake command failed: {build_dir} {source_dir} {configs} {vars}")
 	
 def ninja(build_dir, *targets):
+	from time import monotonic_ns
+	t_start = monotonic_ns()
 	if cmd("ninja", *targets, cwd=build_dir) != 0:
 		raise Exception(f"ninja failed: {build_dir} {targets}")
+	t_end = monotonic_ns()
+	print(f"time elapsed: {(t_end - t_start) / 1e9} s")
 
 
 tools = dict()
