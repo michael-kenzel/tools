@@ -31,7 +31,7 @@ def cmake_var_def_args(vars):
 def cmake_configure(build_dir, source_dir, configs, **vars):
 	if cmd("cmake", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release", *tuple(cmake_var_def_args(vars)), source_dir, cwd=build_dir) != 0:
 		raise Exception(f"cmake command failed: {build_dir} {source_dir} {configs} {vars}")
-	
+
 def ninja(build_dir, *targets):
 	from time import monotonic_ns
 	t_start = monotonic_ns()
